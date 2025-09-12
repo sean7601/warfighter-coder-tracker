@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warfighter-Coder Program Tracker v3</title>
+    <!-- Using Chart.js from a CDN as requested -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* --- General Layout & Theme --- */
+        :root {
+            --primary-color: #003087; --secondary-color: #f0f0f0; --accent-color: #fcd116;
+            --text-color: #333; --light-text-color: #fff; --border-color: #ccc;
+            --danger-color: #d9534f; --success-color: #5cb85c; --warning-color: #f0ad4e;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: var(--secondary-color); color: var(--text-color); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3, h4 { color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; }
+        h4 { border: none; padding-bottom: 5px; margin-top: 20px; }
+        .header { background-color: var(--primary-color); color: var(--light-text-color); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .header h1 { color: var(--light-text-color); margin: 0; border: none; }
+        .header-actions button, .header-actions label { margin-left: 10px; }
+        .nav-tabs { display: flex; background-color: #fff; border-bottom: 1px solid var(--border-color); }
+        .nav-tab { padding: 10px 20px; cursor: pointer; border-bottom: 3px solid transparent; }
+        .nav-tab.active { border-bottom: 3px solid var(--primary-color); font-weight: bold; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .card { background-color: #fff; border: 1px solid var(--border-color); border-radius: 5px; padding: 20px; margin-bottom: 20px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; color: var(--light-text-color); font-size: 1em; }
+        .btn-primary { background-color: var(--primary-color); } .btn-success { background-color: var(--success-color); } .btn-danger { background-color: var(--danger-color); } .btn-secondary { background-color: #6c757d; }
+        
+        /* --- Nicer Input Forms --- */
+        form label, .label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9em; color: #555; }
+        form input[type="text"], form input[type="date"], form input[type="number"], form textarea, form select {
+            width: 100%; padding: 12px; margin-bottom: 18px; border: 1px solid var(--border-color); border-radius: 5px;
+            box-sizing: border-box; background-color: #fdfdfd; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        form input:focus, form textarea:focus, form select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.2); }
+        textarea { min-height: 80px; resize: vertical; }
+        form button[type="submit"] { margin-top: 10px; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .item-list { list-style-type: none; padding: 0; }
+        .item-list li { background-color: #fff; padding: 15px; border: 1px solid var(--border-color); margin-bottom: -1px; cursor: pointer; transition: background-color 0.2s; }
+        .item-list li.active { background-color: #e7f0fe; border-left: 3px solid var(--primary-color); font-weight: bold;}
+        .item-list li:hover { background-color: #f9f9f9; }
+        .item-list li strong { color: var(--primary-color); }
+        .details-view h3 { margin-top: 0; }
+        .hidden { display: none; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; color: var(--light-text-color); margin-left: 10px; }
+        .tag-shipped { background-color: var(--success-color); } .tag-mvp { background-color: var(--warning-color); } .tag-idea { background-color: #6c757d; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-card { text-align: center; }
+        .stat-card .number { font-size: 2.5em; font-weight: bold; color: var(--primary-color); }
+        .stat-card .label { font-size: 1em; color: #666; }
+        .metric-history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.9em;}
+        .metric-history-log { background-color: #fafafa; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto; }
+        .metric-history-log ul { padding-left: 20px; margin: 5px 0 0 0; }
+        .okr-card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-top: 20px; background: #fdfdfd; }
+        .okr-card h4 { border-bottom: 1px solid #eee; }
+        .kr-item { padding: 10px; margin-bottom: 10px; border-left: 3px solid var(--warning-color); background: #fafafa; }
+        .kr-item .progress-bar { background-color: #e9ecef; border-radius: .25rem; height: 1rem; margin-top: 5px; }
+        .kr-item .progress-bar-inner { background-color: var(--success-color); height: 100%; border-radius: .25rem; transition: width 0.5s ease-in-out; text-align: center; color: white; font-size: 0.8em; line-height: 1rem;}
+        .measurement-log { font-size: 0.9em; color: #555; padding-left: 15px; }
+        .kr-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        /* --- App View Specific Layout --- */
+        .app-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 900px) { .app-layout.details-visible { grid-template-columns: 250px 1fr; transition: grid-template-columns 0.4s ease-in-out; } .app-layout.details-visible:hover .app-list-container { flex-basis: 350px; } .app-list-container { flex-grow: 0; flex-shrink: 0; flex-basis: 250px; transition: flex-basis 0.4s ease-in-out; } .app-details-container { flex-grow: 1; } }
+        
+        /* --- Modal Styles --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .modal-overlay:not(.hidden) { opacity: 1; pointer-events: auto; }
+        .modal-content { background: #fff; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; position: relative; transform: scale(0.95); transition: transform 0.3s ease; }
+        .modal-overlay:not(.hidden) .modal-content { transform: scale(1); }
+        .modal-close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 2em; line-height: 1; cursor: pointer; color: #aaa; }
+        .modal-close-btn:hover { color: #333; }
+        
+        .sailor-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center; margin-bottom: 20px; }
+        .editable-dates-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; align-items: end; background-color: #f7f7f7; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .editable-dates-grid input { margin-bottom: 0; }
+        
+        /* --- Dashboard Layout --- */
+        .dashboard-layout-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 900px) { .dashboard-layout-grid { grid-template-columns: 3fr 2fr; } }
+        .performers-list { padding: 0; list-style-position: inside; }
+        .performers-list li { padding: 10px; border-bottom: 1px solid #eee; }
+        .performers-list li:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>Program Tracker v3</h1>
+        <div class="header-actions">
+            <button id="export-data-btn" class="btn btn-secondary">Export Data (JSON)</button>
+            <label for="import-data-input" class="btn btn-secondary">Import Data</label>
+            <input type="file" id="import-data-input" class="hidden" accept=".json">
+            <button id="clear-data-btn" class="btn btn-danger">Clear All Data</button>
+        </div>
+    </header>
+
+    <div class="nav-tabs">
+        <div class="nav-tab active" data-view="dashboard-view">Dashboard</div>
+        <div class="nav-tab" data-view="sailors-view">Sailors</div>
+        <div class="nav-tab" data-view="apps-view">Applications</div>
+    </div>
+
+    <div class="container">
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="view active"></div>
+        <!-- Sailor View -->
+        <div id="sailors-view" class="view"></div>
+        <!-- Applications View -->
+        <div id="apps-view" class="view"></div>
+    </div>
+
+    <!-- Modal for adding a new Key Result -->
+    <div id="add-kr-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close-btn">&times;</button>
+            <h3>Add New Key Result</h3>
+            <form id="add-kr-form">
+                <input type="hidden" name="okrId" value="">
+                <label for="kr-text">Key Result Description</label>
+                <textarea id="kr-text" name="text" required></textarea>
+                <div class="form-grid">
+                    <div><label for="kr-startValue">Start Value</label><input type="number" id="kr-startValue" name="startValue" required step="any"></div>
+                    <div><label for="kr-targetValue">Target Value</label><input type="number" id="kr-targetValue" name="targetValue" required step="any"></div>
+                </div>
+                <label for="kr-unit">Unit (e.g., %, hours)</label><input type="text" id="kr-unit" name="unit" placeholder="e.g. hours, %, units">
+                <button type="submit" class="btn btn-primary">Add Key Result</button>
+            </form>
+        </div>
+    </div>
+
+
+<script>
+var state
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- STATE MANAGEMENT ---
+    state = { sailors: [], apps: [], checkins: [] };
+    const DB_KEY = 'warfighterCoderTrackerDataV3';
+    let charts = {};
+
+    function saveState() { localStorage.setItem(DB_KEY, JSON.stringify(state)); }
+
+    function migrateStateData() {
+        if (!state.checkins) state.checkins = [];
+        if (!state.apps) state.apps = [];
+        state.apps.forEach(app => {
+            if (!app.metrics) app.metrics = {};
+            if (!app.metrics.timeSavedPerUserHistory) app.metrics.timeSavedPerUserHistory = [];
+            if (!app.metrics.numUsersHistory) app.metrics.numUsersHistory = [];
+            if (!app.ideaDate) app.ideaDate = app.creationDate || new Date().toISOString().split('T')[0];
+            if (!app.mvpDate && app.status === 'MVP') app.mvpDate = app.ideaDate;
+            if (!app.shippedDate && app.status === 'Shipped') app.shippedDate = app.mvpDate || app.ideaDate;
+        });
+    }
+
+    function loadState() {
+        const data = localStorage.getItem(DB_KEY);
+        if (data) {
+            state = JSON.parse(data);
+            migrateStateData(); // Ensure loaded data has the latest structure
+        }
+    }
+    
+    // --- UTILITY & CALCULATION FUNCTIONS ---
+    function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+    function findSailorById(id) { return state.sailors.find(s => s.id === id); }
+    function findAppById(id) { return state.apps.find(a => a.id === id); }
+    function getKrProgress(kr) {
+        if (!kr.measurements || kr.measurements.length === 0) return 0;
+        const latestValue = kr.measurements.sort((a,b) => new Date(b.date) - new Date(a.date))[0].value;
+        const range = kr.targetValue - kr.startValue;
+        if (range === 0) return latestValue >= kr.targetValue ? 100 : 0;
+        const progress = ((latestValue - kr.startValue) / range) * 100;
+        return Math.max(0, Math.min(progress, 100));
+    }
+    function calculateCumulativeHoursSaved(app) {
+        const startDate = app.mvpDate;
+        if (!startDate || !app.metrics.timeSavedPerUserHistory.length || !app.metrics.numUsersHistory.length) return 0;
+        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+        let totalHours = 0;
+        for (let d = new Date(startDate); d <= new Date(); d.setTime(d.getTime() + msPerWeek)) {
+            const currentDate = new Date(d);
+            const latestUsers = [...app.metrics.numUsersHistory].sort((a,b) => new Date(b.date) - new Date(a.date)).find(h => new Date(h.date) <= currentDate)?.value || 0;
+            const latestHoursPerUser = [...app.metrics.timeSavedPerUserHistory].sort((a,b) => new Date(b.date) - new Date(a.date)).find(h => new Date(h.date) <= currentDate)?.value || 0;
+            totalHours += latestUsers * latestHoursPerUser;
+        }
+        return Math.round(totalHours);
+    }
+    function destroyCharts() { Object.values(charts).forEach(chart => chart?.destroy()); charts = {}; }
+
+    // --- RENDER FUNCTIONS (THE "V" of MVC) ---
+    function render() {
+        destroyCharts();
+        renderDashboard();
+        renderSailorsView();
+        renderAppsView();
+    }
+
+    // --- DASHBOARD RENDERING ---
+    function renderDashboard() {
+        const view = document.getElementById('dashboard-view');
+        const totalCumulativeHours = state.apps.reduce((sum, app) => sum + calculateCumulativeHoursSaved(app), 0);
+        const totalUsers = state.apps.reduce((sum, app) => sum + ([...app.metrics.numUsersHistory].pop()?.value || 0), 0);
+        
+        const performers = state.sailors.map(sailor => {
+            const appsBuilt = state.apps.filter(app => app.builderIds.includes(sailor.id));
+            const totalHoursSaved = appsBuilt.reduce((sum, app) => sum + calculateCumulativeHoursSaved(app), 0);
+            const appsLaunched = appsBuilt.filter(app => ['MVP', 'Shipped'].includes(app.status)).length;
+            return { name: sailor.name, totalHoursSaved, appsLaunched };
+        }).sort((a, b) => b.totalHoursSaved - a.totalHoursSaved).slice(0, 5);
+
+        let topPerformersHtml = `<ol class="performers-list">` + performers.map(p => `<li><strong>${p.name}</strong><br><small>${p.totalHoursSaved.toLocaleString()} hours saved | ${p.appsLaunched} apps launched</small></li>`).join('') + `</ol>`;
+        if (performers.length === 0) { topPerformersHtml = '<p>No sailor performance data available yet.</p>'; }
+
+        view.innerHTML = `
+            <h2>Program Health Dashboard</h2>
+            <div class="card stat-grid">
+                <div class="stat-card"><div class="number">${state.sailors.length}</div><div class="label">Trained Sailors</div></div>
+                <div class="stat-card"><div class="number">${state.apps.length}</div><div class="label">Applications Built</div></div>
+                <div class="stat-card"><div class="number">${totalUsers.toLocaleString()}</div><div class="label">Current App Users</div></div>
+                <div class="stat-card"><div class="number">${totalCumulativeHours.toLocaleString()}</div><div class="label">Total Hours Saved (Est.)</div></div>
+            </div>
+            <div class="dashboard-layout-grid">
+                <div id="dashboard-okr-chart-container" class="card"></div>
+                <div class="card"><h3>Top Performers</h3>${topPerformersHtml}</div>
+            </div>`;
+        renderDashboardAppOverview();
+    }
+    
+    function renderDashboardAppOverview() {
+        const container = document.getElementById('dashboard-okr-chart-container');
+        if (!container) return;
+        container.innerHTML = `<h3>Application OKR Progress</h3><p>Average progress across all Key Results for each application. Click a bar to see details.</p><canvas id="dashboard-okr-chart"></canvas>`;
+        const appProgressData = state.apps.map(app => { const krs = app.okrs?.flatMap(okr => okr.keyResults || []) || []; const avgProgress = krs.length > 0 ? krs.reduce((sum, kr) => sum + getKrProgress(kr), 0) / krs.length : 0; return { name: app.name, progress: avgProgress, id: app.id }; });
+        const ctx = document.getElementById('dashboard-okr-chart').getContext('2d');
+        charts.dashboardOkr = new Chart(ctx, { type: 'bar', data: { labels: appProgressData.map(d => d.name), datasets: [{ label: 'Average KR Completion', data: appProgressData.map(d => d.progress), backgroundColor: 'rgba(0, 48, 135, 0.7)', }] }, options: { indexAxis: 'y', scales: { x: { beginAtZero: true, max: 100, title: { display: true, text: 'Progress (%)' } } }, plugins: { legend: { display: false } }, onClick: (evt, elements) => { if (elements.length > 0) { const appIndex = elements[0].index; const appId = appProgressData[appIndex].id; renderDashboardKrDrilldown(appId); } } } });
+    }
+    
+    function renderDashboardKrDrilldown(appId) {
+        const app = findAppById(appId); if (!app) return; destroyCharts();
+        const container = document.getElementById('dashboard-okr-chart-container');
+        container.innerHTML = `<div style="display:flex; justify-content: space-between; align-items: center;"><h3>KR Progress for: ${app.name}</h3><button id="back-to-overview-btn" class="btn btn-secondary">← Back to Overview</button></div><canvas id="dashboard-kr-drilldown-chart"></canvas>`;
+        const krs = app.okrs?.flatMap(okr => okr.keyResults || []) || [];
+        const ctx = document.getElementById('dashboard-kr-drilldown-chart').getContext('2d');
+        charts.dashboardDrilldown = new Chart(ctx, { type: 'bar', data: { labels: krs.map(kr => kr.text.length > 50 ? kr.text.substring(0, 47) + '...' : kr.text), datasets: [{ label: 'KR Completion', data: krs.map(kr => getKrProgress(kr)), backgroundColor: 'rgba(92, 184, 92, 0.7)', }] }, options: { indexAxis: 'y', scales: { x: { beginAtZero: true, max: 100, title: { display: true, text: 'Progress (%)' } } }, plugins: { legend: { display: false } } } });
+    }
+
+    // --- SAILOR RENDERING ---
+    function renderSailorsView() {
+        const view = document.getElementById('sailors-view');
+        const activeSailorId = document.querySelector('#sailors-list .active')?.dataset.id;
+        view.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Sailors</h2><button id="add-sailor-btn" class="btn btn-primary">+ Add Sailor</button></div><div id="add-sailor-form-container" class="card hidden"><h3>Add a New Sailor</h3><form id="sailor-form"><label for="sailor-name">Name</label><input type="text" id="sailor-name" required><label for="sailor-command">Command/Unit</label><input type="text" id="sailor-command" required><label for="sailor-training-date">Training Completion Date</label><input type="date" id="sailor-training-date" required><button type="submit" class="btn btn-success">Save Sailor</button><button type="button" id="cancel-add-sailor" class="btn btn-secondary">Cancel</button></form></div><div class="form-grid"><div class="card"><h3>All Sailors</h3><ul id="sailors-list" class="item-list"></ul></div><div id="sailor-details-container" class="card hidden"></div></div>`;
+        const list = view.querySelector('#sailors-list');
+        list.innerHTML = state.sailors.map(s => `<li data-id="${s.id}" class="${s.id === activeSailorId ? 'active' : ''}"><strong>${s.name}</strong><br><small>${s.command}</small></li>`).join('') || '<li>No sailors added yet.</li>';
+        if (activeSailorId) {
+            const sailor = findSailorById(activeSailorId); const container = view.querySelector('#sailor-details-container');
+            const appsBuilt = state.apps.filter(app => app.builderIds.includes(sailor.id)); const sailorCheckins = state.checkins.filter(c => c.sailorId === sailor.id).sort((a,b) => new Date(b.date) - new Date(a.date)); const totalUsers = appsBuilt.reduce((sum, app) => sum + ([...app.metrics.numUsersHistory].pop()?.value || 0), 0); const totalHoursSaved = appsBuilt.reduce((sum, app) => sum + calculateCumulativeHoursSaved(app), 0);
+            container.classList.remove('hidden');
+            container.innerHTML = `<h3>${sailor.name}</h3><p><strong>Command:</strong> ${sailor.command}</p><p><strong>Trained On:</strong> ${new Date(sailor.trainingDate).toLocaleDateString()}</p><hr><h4>Contribution Stats</h4><div class="sailor-stats-grid"><div class="stat-card"><div class="number">${appsBuilt.length}</div><div class="label">Apps Built</div></div><div class="stat-card"><div class="number">${totalUsers.toLocaleString()}</div><div class="label">Total Users of Apps</div></div><div class="stat-card"><div class="number">${totalHoursSaved.toLocaleString()}</div><div class="label">Total Hours Saved</div></div></div><hr><h4>Check-ins</h4><form id="add-checkin-form" data-sailor-id="${sailor.id}"><label for="checkin-notes">New Check-in Note:</label><textarea id="checkin-notes" required></textarea><button type="submit" class="btn btn-primary">Add Check-in</button></form><ul class="item-list" style="margin-top: 20px;">${sailorCheckins.map(c => `<li><strong>${new Date(c.date).toLocaleDateString()}:</strong> ${c.notes}</li>`).join('') || '<li>No check-ins logged.</li>'}</ul>`;
+        }
+    }
+
+    // --- APPLICATION RENDERING ---
+    function renderAppsView() {
+        const view = document.getElementById('apps-view');
+        const activeAppId = document.querySelector('#apps-list .active')?.dataset.id;
+        view.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Applications</h2><button id="add-app-btn" class="btn btn-primary">+ Add Application</button></div><div id="add-app-form-container" class="card hidden"><h3>Add a New Application</h3><form id="app-form"><label for="app-name">Application Name</label><input type="text" id="app-name" required><label for="app-description">Description</label><textarea id="app-description" required></textarea><label for="app-status-new">Initial Status</label><select id="app-status-new"><option value="Idea">Idea</option><option value="MVP">MVP</option><option value="Shipped">Shipped</option></select><label for="app-builders">Builders</label><select id="app-builders" multiple size="5"></select><button type="submit" class="btn btn-success">Save Application</button><button type="button" id="cancel-add-app" class="btn btn-secondary">Cancel</button></form></div><div class="app-layout"><div class="card app-list-container"><h3>All Applications</h3><ul id="apps-list" class="item-list"></ul></div><div id="app-details-container" class="card hidden"></div></div>`;
+        const list = view.querySelector('#apps-list');
+        list.innerHTML = state.apps.map(app => `<li data-id="${app.id}" class="${app.id === activeAppId ? 'active' : ''}"><strong>${app.name}</strong><span class="tag tag-${app.status.toLowerCase()}">${app.status}</span></li>`).join('') || '<li>No applications added yet.</li>';
+        const layout = view.querySelector('.app-layout');
+        if (activeAppId) {
+            layout.classList.add('details-visible');
+            const app = findAppById(activeAppId);
+            const container = view.querySelector('#app-details-container');
+            const builders = app.builderIds.map(id => findSailorById(id)?.name || 'Unknown Sailor').join(', ');
+            const latestHours = [...app.metrics.timeSavedPerUserHistory].pop()?.value || 0;
+            const latestUsers = [...app.metrics.numUsersHistory].pop()?.value || 0;
+            container.innerHTML = `<h3>${app.name}</h3><div style="display:flex; align-items:center; gap: 10px; margin-bottom: 15px;"><select id="app-status-update" data-app-id="${app.id}" class="tag-select"><option value="Idea" ${app.status === 'Idea' ? 'selected' : ''}>Idea</option><option value="MVP" ${app.status === 'MVP' ? 'selected' : ''}>MVP</option><option value="Shipped" ${app.status === 'Shipped' ? 'selected' : ''}>Shipped</option></select><span><strong>Builders:</strong> ${builders}</span></div><p>${app.description}</p><div class="editable-dates-grid"><div><label class="label">Idea Date</label><input type="date" value="${app.ideaDate || ''}" data-app-id="${app.id}" data-date-type="ideaDate"></div><div><label class="label">MVP Date</label><input type="date" value="${app.mvpDate || ''}" data-app-id="${app.id}" data-date-type="mvpDate" ${!app.ideaDate ? 'disabled' : ''}></div><div><label class="label">Shipped Date</label><input type="date" value="${app.shippedDate || ''}" data-app-id="${app.id}" data-date-type="shippedDate" ${!app.mvpDate ? 'disabled' : ''}></div></div><div class="card"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"><h4 style="margin: 0; border: none;">Success Metrics</h4><button id="save-app-metrics-btn" class="btn btn-success">Save Metrics</button></div><div class="form-grid"><div><label>Weekly Hours Saved Per User</label><input type="number" id="metric-hours-per-user" value="${latestHours}"></div><div><label>Number of Users</label><input type="number" id="metric-num-users" value="${latestUsers}"></div><div><label>User Satisfaction (1-10)</label><input type="number" id="metric-satisfaction" value="${app.metrics.satisfaction || 5}" min="1" max="10"></div></div><div class="metric-history-grid" style="margin-top: 20px;"><div class="metric-history-log"><strong>Hours/User History:</strong><ul>${[...app.metrics.timeSavedPerUserHistory].reverse().map(h => `<li>${h.date}: ${h.value}</li>`).join('') || '<li>No history</li>'}</ul></div><div class="metric-history-log"><strong>User Count History:</strong><ul>${[...app.metrics.numUsersHistory].reverse().map(h => `<li>${h.date}: ${h.value}</li>`).join('') || '<li>No history</li>'}</ul></div></div></div><div style="display: flex; justify-content: space-between; align-items: center;"><h4>OKRs (Objectives and Key Results)</h4><button class="btn btn-secondary" data-action="add-objective">+ Add Objective</button></div><div id="okrs-container">${(app.okrs || []).map(renderOkrCard).join('') || '<p>No objectives defined yet.</p>'}</div>`;
+            container.classList.remove('hidden');
+            (app.okrs || []).forEach(okr => (okr.keyResults || []).forEach(kr => createKrChart(kr)));
+        } else { layout.classList.remove('details-visible'); }
+    }
+    // Unchanged helper functions
+    function renderOkrCard(okr) { return `<div class="okr-card" data-okr-id="${okr.id}"><div style="display:flex; justify-content:space-between; align-items:center;"><h4 style="margin:0; border:none;">Objective: ${okr.objective}</h4><button class="btn btn-primary" data-action="open-kr-modal" data-okr-id="${okr.id}">+ Add Key Result</button></div><div style="margin-top:15px;">${(okr.keyResults || []).map(renderKrItem).join('') || '<p style="font-size:0.9em; color:#666;">No Key Results for this objective yet.</p>'}</div></div>`; }
+    function renderKrItem(kr) { const progress = getKrProgress(kr); return `<div class="kr-item" data-kr-id="${kr.id}"><strong>KR:</strong> ${kr.text} (Target: ${kr.targetValue} ${kr.unit || ''})<div class="progress-bar"><div class="progress-bar-inner" style="width: ${progress}%;">${progress.toFixed(0)}%</div></div><div class="kr-details-grid"><div><canvas id="kr-chart-${kr.id}"></canvas></div><div><form data-action="log-measurement" data-kr-id="${kr.id}"><label>Log New Measurement:</label><input type="number" name="value" placeholder="Current Value" required step="any"><input type="date" name="date" value="${new Date().toISOString().split('T')[0]}" required><button class="btn btn-success" type="submit">Log</button></form><div class="measurement-log"><strong>Log:</strong><ul>${(kr.measurements || []).slice(-5).reverse().map(m => `<li>${m.date}: ${m.value} ${kr.unit || ''}</li>`).join('') || '<li>No measurements yet.</li>'}</ul></div></div></div></div>`; }
+    function createKrChart(kr) { const canvas = document.getElementById(`kr-chart-${kr.id}`); if (!canvas || !kr.measurements || kr.measurements.length === 0) return; const ctx = canvas.getContext('2d'); const sortedMeasurements = [...kr.measurements].sort((a,b) => new Date(a.date) - new Date(b.date)); charts[kr.id] = new Chart(ctx, { type: 'line', data: { labels: sortedMeasurements.map(m => m.date), datasets: [ { label: 'Progress', data: sortedMeasurements.map(m => m.value), borderColor: 'rgba(0, 48, 135, 1)', fill: true, tension: 0.1 }, { label: 'Target', data: Array(sortedMeasurements.length).fill(kr.targetValue), borderColor: 'rgba(217, 83, 79, 1)', borderDash: [5, 5], pointRadius: 0, fill: false } ] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } }); }
+
+    // --- EVENT HANDLERS (THE "C" of MVC) ---
+    document.body.addEventListener('click', (e) => {
+        const button = e.target.closest('button'); const tab = e.target.closest('.nav-tab'); const li = e.target.closest('.item-list li'); const modalCloseBtn = e.target.closest('.modal-close-btn'); const modalOverlay = e.target.closest('.modal-overlay');
+        if (tab) { document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); tab.classList.add('active'); document.getElementById(tab.dataset.view).classList.add('active'); return; }
+        if (li && !li.classList.contains('active')) { li.parentElement.querySelectorAll('li').forEach(item => item.classList.remove('active')); li.classList.add('active'); render(); return; }
+        if (modalCloseBtn || (modalOverlay && !e.target.closest('.modal-content'))) { e.currentTarget.querySelector('.modal-overlay:not(.hidden)')?.classList.add('hidden'); return; }
+        if (button) {
+            if (button.id === 'add-sailor-btn' || button.id === 'add-app-btn') { const formContainer = button.id === 'add-sailor-btn' ? document.getElementById('add-sailor-form-container') : document.getElementById('add-app-form-container'); if (button.id === 'add-app-btn') document.getElementById('app-builders').innerHTML = state.sailors.map(s => `<option value="${s.id}">${s.name}</option>`).join(''); formContainer.classList.toggle('hidden'); return; }
+            if (button.id === 'cancel-add-sailor' || button.id === 'cancel-add-app') { button.closest('.card').classList.add('hidden'); return; }
+            if (button.id === 'export-data-btn') { const dataStr = JSON.stringify(state, null, 2); const dataBlob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(dataBlob); const a = document.createElement('a'); a.href = url; a.download = `wfc-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); return; }
+            if (button.id === 'clear-data-btn') { if (confirm("WARNING: This will permanently delete all sailors, applications, and check-ins. This action cannot be undone. Are you sure?")) { state = { sailors: [], apps: [], checkins: [] }; saveState(); render(); alert('All data has been cleared.'); } return; }
+            if (button.dataset.action === 'open-kr-modal') { const form = document.getElementById('add-kr-form'); form.reset(); form.querySelector('input[name="okrId"]').value = button.dataset.okrId; document.getElementById('add-kr-modal').classList.remove('hidden'); return; }
+            if (button.id === 'back-to-overview-btn') { destroyCharts(); renderDashboardAppOverview(); return; }
+            const activeAppId = document.querySelector('#apps-list .active')?.dataset.id;
+            if (activeAppId) { const app = findAppById(activeAppId); if (button.dataset.action === 'add-objective') { const objective = prompt("Enter the new Objective:"); if (objective) { if (!app.okrs) app.okrs = []; app.okrs.push({ id: generateId(), objective: objective, keyResults: [] }); saveState(); render(); } } else if (button.id === 'save-app-metrics-btn') { const today = new Date().toISOString().split('T')[0]; const newHours = parseFloat(document.getElementById('metric-hours-per-user').value); const newUsers = parseInt(document.getElementById('metric-num-users').value); const latestHours = [...app.metrics.timeSavedPerUserHistory].pop()?.value; const latestUsers = [...app.metrics.numUsersHistory].pop()?.value; if (newHours !== latestHours) app.metrics.timeSavedPerUserHistory.push({ date: today, value: newHours }); if (newUsers !== latestUsers) app.metrics.numUsersHistory.push({ date: today, value: newUsers }); app.metrics.satisfaction = parseInt(document.getElementById('metric-satisfaction').value) || 5; alert('Success metrics saved!'); saveState(); render(); } }
+        }
+    });
+    document.body.addEventListener('submit', (e) => {
+        e.preventDefault(); const form = e.target;
+        if (form.id === 'sailor-form') { state.sailors.push({ id: generateId(), name: form.querySelector('#sailor-name').value, command: form.querySelector('#sailor-command').value, trainingDate: form.querySelector('#sailor-training-date').value }); }
+        if (form.id === 'app-form') { const today = new Date().toISOString().split('T')[0]; const status = form.querySelector('#app-status-new').value; const newApp = { id: generateId(), name: form.querySelector('#app-name').value, description: form.querySelector('#app-description').value, status: status, ideaDate: today, mvpDate: null, shippedDate: null, builderIds: [...form.querySelector('#app-builders').selectedOptions].map(opt => opt.value), metrics: { timeSavedPerUserHistory: [], numUsersHistory: [], satisfaction: 5 }, okrs: [] }; if (status === 'MVP') newApp.mvpDate = today; if (status === 'Shipped') { newApp.mvpDate = today; newApp.shippedDate = today; } state.apps.push(newApp); }
+        if (form.id === 'add-checkin-form') { state.checkins.push({ id: generateId(), sailorId: form.dataset.sailorId, date: new Date().toISOString().split('T')[0], notes: form.querySelector('#checkin-notes').value }); }
+        if (form.id === 'add-kr-form') { const activeAppId = document.querySelector('#apps-list .active')?.dataset.id; const app = findAppById(activeAppId); const formData = new FormData(form); const okr = app.okrs.find(o => o.id === formData.get('okrId')); if (okr) { okr.keyResults.push({ id: generateId(), text: formData.get('text'), startValue: parseFloat(formData.get('startValue')), targetValue: parseFloat(formData.get('targetValue')), unit: formData.get('unit'), measurements: [] }); document.getElementById('add-kr-modal').classList.add('hidden'); } } else { const activeAppId = document.querySelector('#apps-list .active')?.dataset.id; if (activeAppId) { const app = findAppById(activeAppId); if (form.dataset.action === 'log-measurement') { const kr = app.okrs.flatMap(o => o.keyResults).find(k => k.id === form.dataset.krId); const formData = new FormData(form); kr.measurements.push({ date: formData.get('date'), value: parseFloat(formData.get('value')) }); } } }
+        saveState(); render();
+    });
+    document.body.addEventListener('change', (e) => {
+        if (e.target.id === 'import-data-input') { const file = e.target.files[0]; if (!file) return; if (!confirm("Are you sure? This will overwrite all current data.")) { e.target.value = ''; return; }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedState = JSON.parse(event.target.result);
+                    if (importedState.sailors && importedState.apps) {
+                        state = importedState;
+                        migrateStateData(); // Ensure imported data has the latest structure
+                        saveState();
+                        render();
+                        alert('Data imported successfully!');
+                    } else { alert('Import failed: Invalid data file structure.'); }
+                } catch (error) { alert('Import failed: ' + error.message); } 
+                finally { e.target.value = ''; }
+            };
+            reader.readAsText(file);
+        }
+        if (e.target.id === 'app-status-update') { const app = findAppById(e.target.dataset.appId); const newStatus = e.target.value; if (app && app.status !== newStatus) { app.status = newStatus; const today = new Date().toISOString().split('T')[0]; if (newStatus === 'MVP' && !app.mvpDate) app.mvpDate = today; if (newStatus === 'Shipped' && !app.shippedDate) app.shippedDate = today; saveState(); render(); } }
+        if (e.target.dataset.dateType) { const app = findAppById(e.target.dataset.appId); if (app) { app[e.target.dataset.dateType] = e.target.value || null; saveState(); render(); } }
+    });
+
+    // --- INITIALIZATION ---
+    loadState();
+    render();
+});
+</script>
+
+</body>
+</html>
